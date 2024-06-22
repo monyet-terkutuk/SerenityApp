@@ -7,6 +7,7 @@
 var app = require('../app');
 var debug = require('debug')('serenityapp:server');
 var http = require('http');
+const connectDatabase = require("../db/Database");
 
 /**
  * Get port from environment and store in Express.
