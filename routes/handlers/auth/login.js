@@ -27,45 +27,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({
-      where: { email: body.email },
-    });
-
-    if (!user) {
-      return res.status(401).json({
-        meta: {
-          message:
-            "Authentication failed. Please ensure your email and password are correct.",
-          code: 401,
-          status: "error",
-        },
-        data: null,
-      });
-    }
-
-    const isPasswordCorrect = bcrypt.compareSync(body.password, user.password);
-
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        meta: {
-          message:
-            "Authentication failed. Please ensure your email and password are correct.",
-          code: 401,
-          status: "error",
-        },
-        data: null,
-      });
-    }
-
-    const payload = {
-      guid: user.guid,
-      role: user.role,
-    };
-
-    const secret = process.env.JWT_SECRET;
-    const expiresIn = "1h"; // Use "1h" for 1 hour expiration
-
-    const token = jwt.sign(payload, secret, { expiresIn });
 
     return res.status(200).json({
       meta: {
@@ -74,14 +35,8 @@ module.exports = async (req, res) => {
         status: "success",
       },
       data: {
-        guid: user.guid,
-        username: user.username,
-        image_profile: user.image_profile,
-        address: user.address,
-        role: user.role,
-        email: user.email,
-      },
-      token: token,
+        data: body
+      }
     });
   } catch (error) {
     console.error(error);
