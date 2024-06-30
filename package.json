@@ -1,23 +1,35 @@
 {
-  "name": "serenityapp",
-  "version": "0.0.0",
-  "private": true,
-  "scripts": {
-    "start": "node ./bin/www",
-    "dev": "nodemon ./bin/www"
+  "name": "serenity-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "engines": {
+    "node": "18.x"
   },
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "author": "monyet terkutuk",
+  "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.1.1",
     "bcryptjs": "^2.4.3",
-    "cookie-parser": "~1.4.4",
-    "debug": "~2.6.9",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "cloudinary": "^1.37.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
     "fastest-validator": "^1.18.0",
-    "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.4.3",
+    "js-cookie": "^3.0.1",
+    "jsonwebtoken": "^9.0.0",
+    "midtrans-client": "^1.3.1",
+    "mongoose": "^7.0.0",
     "mongoose-sequence": "^6.0.1",
-    "morgan": "~1.9.1",
-    "nodemon": "^3.1.4"
+    "node-mailjet": "^6.0.5",
+    "nodemailer": "^6.9.1",
+    "nodemon": "^3.1.4",
+    "stripe": "^12.0.0",
+    "xendit-node": "^4.1.0"
   }
 }
