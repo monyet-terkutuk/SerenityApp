@@ -1,12 +1,18 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const AutoIncrement = require('mongoose-sequence')(mongoose);
+const { v4: uuidv4 } = require('uuid');  // Import fungsi uuid
 const { model, Schema } = mongoose;
 
 const HASH_ROUND = 10;
 
 const userSchema = Schema(
   {
+    guid: {
+      type: String,
+      required: true,
+      default: uuidv4,
+    },
     name: {
       type: String,
       required: [true, 'name harus ada'],
@@ -32,8 +38,7 @@ const userSchema = Schema(
       type: String,
     },
     unitWork:{
-      type: Schema.Types.ObjectId,
-      ref:'unitWork'
+      type: String,
     },
     token: [String],
   },

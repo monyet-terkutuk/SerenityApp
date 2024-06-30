@@ -23,6 +23,8 @@ router.post("/register", async (req, res, next) => {
     image: { type: "string", optional: true, max: 255 },
     email: { type: "email", empty: false },
     password: { type: "string", min: 8, empty: false },
+    role: { type: "string", optional: true, max: 255 },
+    unitWork: { type: "string", optional: true, max: 255 },
   };
 
   const { body } = req;
@@ -63,8 +65,7 @@ router.post("/register", async (req, res, next) => {
       code: 200,
       status: "success",
       data: {
-        username: user.name,
-        email: user.email,
+        user
       },
     });
   } catch (error) {
