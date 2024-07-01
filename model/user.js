@@ -53,12 +53,6 @@ userSchema.methods.getJwtToken = function () {
   });
 };
 
-
-userSchema.pre('save', function (next) {
-  this.password = bcrypt.hashSync(this.password, HASH_ROUND);
-  next();
-});
-
 userSchema.plugin(AutoIncrement, { inc_field: 'user_id' });
 
 module.exports = model('User', userSchema);
