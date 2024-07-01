@@ -13,6 +13,7 @@ const bcrypt = require('bcrypt');
 
 // User register
 router.post("/register", async (req, res, next) => {
+  try {
   const userSchema = {
     name: { type: "string", empty: false, max: 255 },
     image: { type: "string", optional: true, max: 255 },
@@ -73,11 +74,15 @@ router.post("/register", async (req, res, next) => {
       data: error.message,
     });
   }
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 400));
+  }
 });
 
 
 // User login
 router.post("/login", async (req, res, next) => {
+  try{
   const { body } = req;
 
   const loginSchema = {
@@ -168,6 +173,29 @@ router.post("/login", async (req, res, next) => {
       data: error.message,
     });
   }
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 400));
+  }
 });
+
+// all users --- for admin
+router.get(
+  "/list",
+  isAuthenticated,
+  isAdmin("admin"),
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const users = await User.find().sort({
+        createdAt: -1,
+      });
+      res.status(201).json({
+        success: true,
+        users,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
 
 module.exports = router;
