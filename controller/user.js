@@ -59,7 +59,7 @@ router.post("/register", async (req, res, next) => {
       code: 200,
       status: "success",
       data: { 
-        guid: user.guid,
+        id : user._id,
         name: user.name,
         image: user.image,
         address: user.address,
@@ -107,8 +107,6 @@ router.post("/login", async (req, res, next) => {
   try {
     const user = await User.findOne({ email: body.email });
 
-    console.log("ini user", user)
-
     if (!user || !user.password) {
       return res.status(401).json({
         meta: {
@@ -121,9 +119,6 @@ router.post("/login", async (req, res, next) => {
     }
 
     const isPasswordCorrect = bcrypt.compareSync(body.password, user.password);
-    console.log("valid pw: ", isPasswordCorrect)
-    console.log("body.password pw: ", body.password)
-    console.log("user.password pw: ", user.password)
     if (!isPasswordCorrect) {
       return res.status(401).json({
         meta: {
@@ -141,7 +136,6 @@ router.post("/login", async (req, res, next) => {
     };
 
     const secret = process.env.JWT_SECRET_KEY;
-    console.log("rahasia", secret)
     const expiresIn = "1h"; // Use "1h" for 1 hour expiration
 
     const token = jwt.sign(payload, secret, { expiresIn: expiresIn });
@@ -153,7 +147,7 @@ router.post("/login", async (req, res, next) => {
         status: "success",
       },
       data: {
-        guid: user.guid,
+        id : user._id,
         name: user.name,
         image: user.image,
         address: user.address,
@@ -178,11 +172,11 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-// all users --- for admin
+// all users 
 router.get(
   "/list",
   isAuthenticated,
-  isAdmin("admin"),
+  // isAdmin("admin"),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const users = await User.find().sort({

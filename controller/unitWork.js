@@ -157,19 +157,19 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-// all users --- for admin
+
 router.get(
   "/list",
   isAuthenticated,
   isAdmin("admin"),
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const users = await User.find().sort({
+      const unitWork = await UnitWork.find().sort({
         createdAt: -1,
       });
       res.status(201).json({
         success: true,
-        users,
+        unitWork,
       });
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
