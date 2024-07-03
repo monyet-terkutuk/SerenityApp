@@ -38,7 +38,8 @@ const userSchema = Schema(
       type: String,
     },
     unitWork:{
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref:'unitWork'
     },
     token: [String],
   },

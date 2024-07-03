@@ -10,6 +10,7 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const Validator = require("fastest-validator");
 const v = new Validator();
 const bcrypt = require('bcrypt');
+const UnitWork = require('../model/unitWork');
 
 // User register
 router.post("/register", async (req, res, next) => {
@@ -131,6 +132,7 @@ router.post("/login", async (req, res, next) => {
     }
 
     const payload = {
+      id: user._id,
       guid: user.guid,
       role: user.role,
     };
@@ -172,21 +174,40 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-// all users 
+// All users
 router.get(
   "/list",
   isAuthenticated,
-  // isAdmin("admin"),
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const users = await User.find().sort({
-        createdAt: -1,
-      });
-      res.status(201).json({
-        success: true,
-        users,
+      const users = await User.find().sort({ createdAt: -1 });
+
+      const userData = await Promise.all(users.map(async (user) => {
+        const unit = await UnitWork.findById(user.unitWork);
+        return {
+          id: user._id,
+          name: user.name,
+          image: user.image,
+          address: user.address,
+          role: user.role,
+          unitWork: unit ? {
+            id: unit._id,
+            name: unit.name,
+          } : null,
+          email: user.email,
+        };
+      }));
+
+      res.status(200).json({
+        meta: {
+          message: "Authentication successful",
+          code: 200,
+          status: "success",
+        },
+        data: userData
       });
     } catch (error) {
+      console.error("Error:", error);
       return next(new ErrorHandler(error.message, 500));
     }
   })

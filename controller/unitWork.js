@@ -161,7 +161,7 @@ router.post("/login", async (req, res, next) => {
 router.get(
   "/list",
   isAuthenticated,
-  isAdmin("admin"),
+  // isAdmin("admin"),
   catchAsyncErrors(async (req, res, next) => {
     try {
       const unitWork = await UnitWork.find().sort({
