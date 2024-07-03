@@ -4,193 +4,128 @@ const router = express.Router();
 const ErrorHandler = require("../utils/ErrorHandler");
 const catchAsyncErrors = require("../middleware/catchAsyncErrors");
 const jwt = require("jsonwebtoken");
-const { sendMail, sendMailForgotPW } = require("../utils/sendMail");
-const sendToken = require("../utils/jwtToken");
+const Reports = require('../model/reports');
 const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const Validator = require("fastest-validator");
 const v = new Validator();
 const bcrypt = require('bcrypt');
 
 // Create unit work
-router.post("/", async (req, res, next) => {
-  try {
-  const unitWorkSchema = {
-    name: { type: "string", empty: false, max: 255 },
-    image: { type: "string", optional: true, max: 255 },
-    email: { type: "email", empty: false },
-    password: { type: "string", min: 8, empty: false },
-    role: { type: "string", optional: true, max: 255 },
-    unitWork: { type: "string", optional: true, max: 255 },
-  };
 
-  const { body } = req;
+router.post(
+  "",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const reportSchema = {
+        title: { type: "string", empty: false, max: 255 },
+        longitude: { type: "string", empty: false, max: 255 },
+        latitude: { type: "string", empty: false, max: 255 },
+        imageReport: { type: "array", items: "string", optional: true },
+        description: { type: "string", empty: false },
+        address: { type: "string", empty: false },
+        category: { type: "string", empty: false },
+      };
 
-  // validation input data
-  const validationResponse = v.validate(body, userSchema);
+      const { body } = req;
 
-  if (validationResponse !== true) {
-    return res.status(400).json({
-      code: 400,
-      status: "error",
-      data: {
-        error: "Validation failed",
-        details: validationResponse,
-      },
-    });
-  }
+      // validation input data
+      const validationResponse = v.validate(body, reportSchema);
 
-  const isEmailUsed = await User.findOne({ email: body.email });
-
-  if (isEmailUsed) {
-    return res.status(400).json({
-      code: 400,
-      status: "error",
-      data: {
-        error: "Email has been used",
-      },
-    });
-  }
-
-  const password = bcrypt.hashSync(body.password, 10);
-
-  try {
-    const user = await User.create({ ...body, password });
-    return res.json({
-      code: 200,
-      status: "success",
-      data: { 
-        guid: user.guid,
-        name: user.name,
-        image: user.image,
-        address: user.address,
-        role: user.role,
-        email: user.email,
-       },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      code: 500,
-      status: "error",
-      data: error.message,
-    });
-  }
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 400));
-  }
-});
-
-
-// User login
-router.post("/login", async (req, res, next) => {
-  try{
-  const { body } = req;
-
-  const loginSchema = {
-    email: { type: "email", empty: false },
-    password: { type: "string", min: 8, empty: false },
-  };
-
-  // Validasi input
-  const validationResponse = v.validate(body, loginSchema);
-
-  if (validationResponse !== true) {
-    return res.status(400).json({
-      meta: {
-        message: "Validation failed",
-        code: 400,
-        status: "error",
-      },
-      data: validationResponse,
-    });
-  }
-
-  try {
-    const user = await User.findOne({ email: body.email });
-
-    console.log("ini user", user)
-
-    if (!user || !user.password) {
-      return res.status(401).json({
-        meta: {
-          message: "User not found.",
-          code: 401,
+      if (validationResponse !== true) {
+        return res.status(400).json({
+          code: 400,
           status: "error",
-        },
-        data: null,
-      });
-    }
+          data: {
+            error: "Validation failed",
+            details: validationResponse,
+          },
+        });
+      }
 
-    const isPasswordCorrect = bcrypt.compareSync(body.password, user.password);
-    console.log("valid pw: ", isPasswordCorrect)
-    console.log("body.password pw: ", body.password)
-    console.log("user.password pw: ", user.password)
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        meta: {
-          message: "Authentication failed. Please ensure your email and password are correct.",
-          code: 401,
+      const reporter = req.user._id; // Access the user ID from the request object
+
+      try {
+        const reportData = { ...body, reporter }; // Add reporter to the report data
+        const reports = await Reports.create(reportData);
+        return res.json({
+          code: 200,
+          status: "success",
+          data: { 
+            reports
+          },
+        });
+      } catch (error) {
+        return res.status(500).json({
+          code: 500,
           status: "error",
-        },
-        data: null,
-      });
+          data: error.message,
+        });
+      }
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 400));
     }
+  })
+);
 
-    const payload = {
-      guid: user.guid,
-      role: user.role,
-    };
+// list report
+// router.get(
+//   "/list",
+//   isAuthenticated,
+//   // isAdmin("admin"),
+//   catchAsyncErrors(async (req, res, next) => {
+//     try {
+//       const reports = await Reports.find().sort({
+//         createdAt: -1,
+//       });
+//       const reporter = await User.findById(reports.reporter);
+//       res.status(201).json({
+//         success: true,
+//         reports,
+//       });
+//     } catch (error) {
+//       return next(new ErrorHandler(error.message, 500));
+//     }
+//   })
+// );
 
-    const secret = process.env.JWT_SECRET_KEY;
-    console.log("rahasia", secret)
-    const expiresIn = "1h"; // Use "1h" for 1 hour expiration
-
-    const token = jwt.sign(payload, secret, { expiresIn: expiresIn });
-
-    return res.status(200).json({
-      meta: {
-        message: "Authentication successful",
-        code: 200,
-        status: "success",
-      },
-      data: {
-        guid: user.guid,
-        name: user.name,
-        image: user.image,
-        address: user.address,
-        role: user.role,
-        email: user.email,
-        token: token,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      meta: {
-        message: "Internal Server Error",
-        code: 500,
-        status: "error",
-      },
-      data: error.message,
-    });
-  }
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 400));
-  }
-});
-
-// all users --- for admin
 router.get(
   "/list",
   isAuthenticated,
-  isAdmin("admin"),
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const users = await User.find().sort({
-        createdAt: -1,
-      });
-      res.status(201).json({
+      const reports = await Reports.find().sort({ createdAt: -1 });
+
+      // Ambil reporter untuk setiap laporan
+      const reporters = await Promise.all(reports.map(async report => {
+        // Temukan reporter berdasarkan ID
+        const reporter = await User.findById(report.reporter);
+
+        // Buat objek laporan yang diinginkan
+        const formattedReport = {
+          id: report._id,
+          title: report.title,
+          description: report.description,
+          address: report.address,
+          latitude: report.latitude,
+          longitude: report.longitude,
+          status: report.status,
+          imageReport: report.imageReport,
+          category: report.category,
+          reporter: {
+            id: reporter ? reporter._id : null,
+            name: reporter ? reporter.name : 'Unknown',
+          },
+          comment: report.comment,
+          createdAt: report.createdAt,
+        };
+
+        return formattedReport;
+      }));
+
+      res.status(200).json({
         success: true,
-        users,
+        reports: reporters,
       });
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
@@ -198,25 +133,5 @@ router.get(
   })
 );
 
-
-router.post(
-    "/",
-    isAuthenticated,
-    isAdmin("admin"),
-    catchAsyncErrors(async (req, res, next) => {
-      try {
-        const users = await User.find().sort({
-          createdAt: -1,
-        });
-        res.status(201).json({
-          success: true,
-          users,
-        });
-      } catch (error) {
-        return next(new ErrorHandler(error.message, 500));
-      }
-    })
-  );
-  
 
 module.exports = router;

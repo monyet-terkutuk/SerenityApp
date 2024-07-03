@@ -25,9 +25,12 @@ if (process.env.NODE_ENV !== "PRODUCTION") {
 // import routes
 const user = require("./controller/user");
 const unitWork = require("./controller/unitWork");
+const reports = require("./controller/report");
 
 app.use("/user", user);
 app.use("/unit-work", unitWork);
+app.use("/reports", reports);
+
 
 // app.use("", welcome);
 

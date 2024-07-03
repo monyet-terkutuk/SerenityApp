@@ -59,105 +59,7 @@ router.post("",isAuthenticated, catchAsyncErrors(async (req, res, next) => {
     }
 }));
 
-// User login
-router.post("/login", async (req, res, next) => {
-  try{
-  const { body } = req;
-
-  const loginSchema = {
-    email: { type: "email", empty: false },
-    password: { type: "string", min: 8, empty: false },
-  };
-
-  // Validasi input
-  const validationResponse = v.validate(body, loginSchema);
-
-  if (validationResponse !== true) {
-    return res.status(400).json({
-      meta: {
-        message: "Validation failed",
-        code: 400,
-        status: "error",
-      },
-      data: validationResponse,
-    });
-  }
-
-  try {
-    const user = await User.findOne({ email: body.email });
-
-    console.log("ini user", user)
-
-    if (!user || !user.password) {
-      return res.status(401).json({
-        meta: {
-          message: "User not found.",
-          code: 401,
-          status: "error",
-        },
-        data: null,
-      });
-    }
-
-    const isPasswordCorrect = bcrypt.compareSync(body.password, user.password);
-    console.log("valid pw: ", isPasswordCorrect)
-    console.log("body.password pw: ", body.password)
-    console.log("user.password pw: ", user.password)
-    if (!isPasswordCorrect) {
-      return res.status(401).json({
-        meta: {
-          message: "Authentication failed. Please ensure your email and password are correct.",
-          code: 401,
-          status: "error",
-        },
-        data: null,
-      });
-    }
-
-    const payload = {
-      guid: user.guid,
-      role: user.role,
-    };
-
-    const secret = process.env.JWT_SECRET_KEY;
-    console.log("rahasia", secret)
-    const expiresIn = "1h"; // Use "1h" for 1 hour expiration
-
-    const token = jwt.sign(payload, secret, { expiresIn: expiresIn });
-
-    return res.status(200).json({
-      meta: {
-        message: "Authentication successful",
-        code: 200,
-        status: "success",
-      },
-      data: {
-        guid: user.guid,
-        name: user.name,
-        image: user.image,
-        address: user.address,
-        role: user.role,
-        email: user.email,
-        token: token,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({
-      meta: {
-        message: "Internal Server Error",
-        code: 500,
-        status: "error",
-      },
-      data: error.message,
-    });
-  }
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 400));
-  }
-});
-
-
+// list unit work
 router.get(
   "/list",
   isAuthenticated,
@@ -176,26 +78,6 @@ router.get(
     }
   })
 );
-
-
-router.post(
-    "/",
-    isAuthenticated,
-    isAdmin("admin"),
-    catchAsyncErrors(async (req, res, next) => {
-      try {
-        const users = await User.find().sort({
-          createdAt: -1,
-        });
-        res.status(201).json({
-          success: true,
-          users,
-        });
-      } catch (error) {
-        return next(new ErrorHandler(error.message, 500));
-      }
-    })
-  );
   
 
 module.exports = router;
