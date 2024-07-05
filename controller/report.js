@@ -9,9 +9,10 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const Validator = require("fastest-validator");
 const v = new Validator();
 const bcrypt = require('bcrypt');
+const UnitWork = require("../model/unitWork");
+const OfficerReport = require('../model/officerReport');
 
-// Create unit work
-
+// Create report
 router.post(
   "",
   isAuthenticated,
@@ -68,27 +69,7 @@ router.post(
   })
 );
 
-// list report
-// router.get(
-//   "/list",
-//   isAuthenticated,
-//   // isAdmin("admin"),
-//   catchAsyncErrors(async (req, res, next) => {
-//     try {
-//       const reports = await Reports.find().sort({
-//         createdAt: -1,
-//       });
-//       const reporter = await User.findById(reports.reporter);
-//       res.status(201).json({
-//         success: true,
-//         reports,
-//       });
-//     } catch (error) {
-//       return next(new ErrorHandler(error.message, 500));
-//     }
-//   })
-// );
-
+// list all report
 router.get(
   "/list",
   isAuthenticated,
@@ -96,10 +77,13 @@ router.get(
     try {
       const reports = await Reports.find().sort({ createdAt: -1 });
 
-      // Ambil reporter untuk setiap laporan
-      const reporters = await Promise.all(reports.map(async report => {
-        // Temukan reporter berdasarkan ID
+      // Ambil reporter, unit_work, officer_report, dan officer untuk setiap laporan
+      const formattedReports = await Promise.all(reports.map(async report => {
+        // Temukan reporter, unit_work, officer_report, dan officer berdasarkan ID
         const reporter = await User.findById(report.reporter);
+        const unitWork = report.unitWorks ? await User.findById(report.unitWorks) : null;
+        const officerReport = report.officerReport ? await User.findById(report.officerReport) : null;
+        const officer = report.officer ? await User.findById(report.officer) : null;
 
         // Buat objek laporan yang diinginkan
         const formattedReport = {
@@ -116,6 +100,18 @@ router.get(
             id: reporter ? reporter._id : null,
             name: reporter ? reporter.name : 'Unknown',
           },
+          unit_work: {
+            id: unitWork ? unitWork._id : null,
+            name: unitWork ? unitWork.name : 'Unknown',
+          },
+          officer_report: {
+            id: officerReport ? officerReport._id : null,
+            name: officerReport ? officerReport.name : 'Unknown',
+          },
+          officer: {
+            id: officer ? officer._id : null,
+            name: officer ? officer.name : 'Unknown',
+          },
           comment: report.comment,
           createdAt: report.createdAt,
         };
@@ -124,11 +120,299 @@ router.get(
       }));
 
       res.status(200).json({
+        code: 200,
         success: true,
-        reports: reporters,
+        data: formattedReports,
       });
     } catch (error) {
       return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
+
+// get report by unit work
+router.get(
+  "/unit-work/:id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+  try {
+    let { limit = 8, skip = 0, q = '', status = '' } = req.query;
+
+    let criteria = {
+      unitWorks: req.params.id,
+      status: 'Diproses',
+    };
+    if (q.length || status.length) {
+      criteria = {
+        ...criteria,
+        title: { $regex: `${q}`, $options: 'i' },
+      };
+    }
+    const count = await Reports.find(criteria).countDocuments();
+    const report = await Reports.find(criteria)
+      .limit(parseInt(limit))
+      .skip(parseInt(skip))
+      .populate({
+        path: 'comment',
+        select: ['message', 'name'],
+      })
+      .select(
+        '_id title status description imageReport unitWorks createdAt address -comment ',
+      );
+    if (report) {
+      res.json({
+        status: 'ok',
+        count,
+        data: report,
+      });
+    }
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+})
+);
+
+// assign report
+router.post(
+  "/assign",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const reportSchema = {
+        report_id: { type: "string", empty: false, max: 255 },
+        unit_work_id: { type: "string", empty: false, max: 255 },
+      };
+
+      const { report_id, unit_work_id } = req.body;
+
+      // Validasi input data
+      const validationResponse = v.validate({ report_id, unit_work_id }, reportSchema);
+
+      if (validationResponse.error) {
+        return res.status(400).json({
+          code: 400,
+          status: "error",
+          data: {
+            error: "Validation failed",
+            details: validationResponse.error.details,
+          },
+        });
+      }
+
+      const report = await Reports.findOneAndUpdate(
+        { _id: report_id }, // Mencari berdasarkan report_id yang sesuai
+        { $set: { unitWorks: unit_work_id, status: 'Diproses' } }, // Memperbarui unitWorks dan status
+        { new: true } // Opsional, untuk mendapatkan dokumen yang diperbarui
+      );
+
+      if (!report) {
+        return res.status(404).json({
+          code: 404,
+          message: 'Report not found',
+          data: null,
+        });
+      }
+
+      return res.json({
+        code: 200,
+        message: 'Unit work has been assigned successfully',
+        data: { report },
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        code: 500,
+        status: "error",
+        data: error.message,
+      });
+    }
+  })
+);
+
+// get report by user id
+router.get( 
+  "/user/:user_id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      let { limit = 8, skip = 0, q = '', status = '' } = req.query;
+      let criteria = {
+        reporter: req.params.user_id, // Menggunakan req.params.user_id untuk pencarian berdasarkan user_id
+      };
+
+      if (q.length) {
+        criteria = {
+          ...criteria,
+          title: { $regex: `${q}`, $options: 'i' },
+        };
+      }
+
+      if (status.length) {
+        criteria = {
+          ...criteria,
+          status: status,
+        };
+      }
+
+      const count = await Reports.find(criteria).countDocuments();
+
+      const report = await Reports.find(criteria)
+        .limit(parseInt(limit))
+        .skip(parseInt(skip))
+        .populate({
+          path: 'comment',
+          select: ['message', 'name'],
+        })
+        .select('_id title status description imageReport unitWorks createdAt address');
+
+      if (report.length > 0) { // Periksa apakah ada report yang ditemukan
+        return res.json({
+          status: 'ok',
+          count,
+          data: report,
+        });
+      } else {
+        return res.status(404).json({
+          code: 404,
+          message: 'No reports found',
+          data: null,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        code: 500,
+        status: "error",
+        data: error.message,
+      });
+    }
+  })
+);
+
+// get report by id
+router.get(
+  "/:id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const reportId = req.params.id;
+
+      // Menggunakan populate untuk mengambil data terkait
+      const report = await Reports.findById(reportId)
+        .populate({
+          path: 'comment',
+          select: ['message', 'name', 'createdAt'],
+        })
+        .populate({
+          path: 'reporter',
+          select: ['_id', 'name'],
+        })
+        .populate({
+          path: 'unitWorks',
+          select: ['_id', 'name', 'image'],
+        })
+        .populate({
+          path: 'officer',
+          select: ['_id', 'name'],
+        })
+        .populate({
+          path: 'officerReport',
+          select: ['message', 'imageReport'],
+        })
+        .select('-__v');
+
+      if (!report) {
+        return res.status(404).json({
+          code: 404,
+          message: 'Report not found',
+          data: null,
+        });
+      }
+
+      return res.status(200).json({
+        code: 200,
+        status: "success",
+        data: report,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
+
+// finish report by officer
+router.post(
+  "/officer/done",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const reportSchema = {
+        id_report: { type: "string", empty: false, max: 255 },
+        message: { type: "string", empty: false },
+        imageReport: { type: "array", items: "string", empty: false },
+      };
+
+      const { body } = req;
+
+      // validation input data
+      const validationResponse = v.validate(body, reportSchema);
+      if (validationResponse !== true) {
+        return res.status(400).json({
+          code: 400,
+          status: "error",
+          data: {
+            error: "Validation failed",
+            details: validationResponse,
+          },
+        });
+      }
+
+      const user = req.user;
+      if (user.role === 'user') {
+        return res.status(403).json({
+          error: 1,
+          message: 'You are not allowed to access',
+        });
+      }
+
+      const id = body.id_report;
+      if (id.match(/^[0-9a-fA-F]{24}$/)) {
+        const newOfficerReport = new OfficerReport({
+          ...body,
+          officer: user._id,
+        });
+
+        await newOfficerReport.save();
+        const updatedReport = await Reports.findOneAndUpdate(
+          { _id: id },
+          { $set: { officerReport: newOfficerReport._id, officer: req.user._id, status: 'Selesai' } },
+          { new: true }
+        );
+
+        if (newOfficerReport) {
+          return res.json({
+            status: 'ok',
+            message: 'Report sent successfully',
+            idReport: newOfficerReport._id,
+          });
+        }
+      } else {
+        return res.status(404).json({
+          error: 1,
+          message: 'Report not found',
+        });
+      }
+    } catch (err) {
+      if (err && err.name === 'ValidationError') {
+        return res.status(400).json({
+          error: 1,
+          message: err.message,
+          fields: err.errors,
+        });
+      }
+      next(err);
     }
   })
 );

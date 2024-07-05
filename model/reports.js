@@ -13,7 +13,6 @@ const reportSchema = Schema(
       type: String,
       required: [true, 'deskripsi harus ada'],
       minlength: 5,
-      maxlength: 250,
     },
     address: {
       type: String,

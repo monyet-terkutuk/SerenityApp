@@ -26,10 +26,12 @@ if (process.env.NODE_ENV !== "PRODUCTION") {
 const user = require("./controller/user");
 const unitWork = require("./controller/unitWork");
 const reports = require("./controller/report");
+const comment = require("./controller/comment");
 
 app.use("/user", user);
 app.use("/unit-work", unitWork);
 app.use("/reports", reports);
+app.use("/comment", comment);
 
 
 // app.use("", welcome);

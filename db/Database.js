@@ -5,9 +5,14 @@ const connectDatabase = () => {
     .connect(process.env.DB_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      // Hapus opsi useCreateIndex dan useFindAndModify
     })
-    .then((data) => {
-      console.log(`mongod connected with server: ${data.connection.host}`);
+    .then(() => {
+      console.log(`MongoDB connected with server: ${mongoose.connection.host}`);
+    })
+    .catch((error) => {
+      console.error("MongoDB connection error:", error.message);
+      process.exit(1); // Exit process with failure
     });
 };
 

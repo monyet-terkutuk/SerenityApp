@@ -80,10 +80,8 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-
-// User login
+// login user
 router.post("/login", async (req, res, next) => {
-  try{
   const { body } = req;
 
   const loginSchema = {
@@ -91,27 +89,26 @@ router.post("/login", async (req, res, next) => {
     password: { type: "string", min: 8, empty: false },
   };
 
-  // Validasi input
-  const validationResponse = v.validate(body, loginSchema);
-
-  if (validationResponse !== true) {
-    return res.status(400).json({
-      meta: {
-        message: "Validation failed",
-        code: 400,
-        status: "error",
-      },
-      data: validationResponse,
-    });
-  }
-
   try {
-    const user = await User.findOne({ email: body.email });
+    // Validasi input
+    const validationResponse = v.validate(body, loginSchema);
+    if (validationResponse.error) {
+      return res.status(400).json({
+        meta: {
+          message: "Validation failed",
+          code: 400,
+          status: "error",
+        },
+        data: validationResponse.error.details,
+      });
+    }
 
+    // Cari pengguna berdasarkan email
+    const user = await User.findOne({ email: body.email });
     if (!user || !user.password) {
       return res.status(401).json({
         meta: {
-          message: "User not found.",
+          message: "Authentication failed. Please ensure your email and password are correct.",
           code: 401,
           status: "error",
         },
@@ -119,6 +116,7 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
+    // Periksa kecocokan kata sandi
     const isPasswordCorrect = bcrypt.compareSync(body.password, user.password);
     if (!isPasswordCorrect) {
       return res.status(401).json({
@@ -131,17 +129,19 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
+    // Jika autentikasi berhasil, buat token JWT
     const payload = {
       id: user._id,
-      guid: user.guid,
       role: user.role,
+      // tambahkan bidang lain yang Anda butuhkan di token JWT
     };
 
     const secret = process.env.JWT_SECRET_KEY;
-    const expiresIn = "1h"; // Use "1h" for 1 hour expiration
+    const expiresIn = "1h"; // Gunakan "1h" untuk token yang berlaku selama 1 jam
 
-    const token = jwt.sign(payload, secret, { expiresIn: expiresIn });
+    const token = jwt.sign(payload, secret, { expiresIn });
 
+    // Kirim respons sukses dengan token JWT
     return res.status(200).json({
       meta: {
         message: "Authentication successful",
@@ -149,7 +149,7 @@ router.post("/login", async (req, res, next) => {
         status: "success",
       },
       data: {
-        id : user._id,
+        id: user._id,
         name: user.name,
         image: user.image,
         address: user.address,
@@ -168,9 +168,6 @@ router.post("/login", async (req, res, next) => {
       },
       data: error.message,
     });
-  }
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 400));
   }
 });
 
