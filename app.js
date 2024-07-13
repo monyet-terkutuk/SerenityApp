@@ -27,11 +27,13 @@ const user = require("./controller/user");
 const unitWork = require("./controller/unitWork");
 const reports = require("./controller/report");
 const comment = require("./controller/comment");
+const category = require("./controller/category");
 
 app.use("/user", user);
 app.use("/unit-work", unitWork);
 app.use("/reports", reports);
 app.use("/comment", comment);
+app.use("/category", category);
 
 
 // app.use("", welcome);
