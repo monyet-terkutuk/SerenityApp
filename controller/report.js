@@ -72,10 +72,12 @@ router.post(
 // list all report
 router.get(
   "/list",
-  isAuthenticated,
   catchAsyncErrors(async (req, res, next) => {
     try {
-      const reports = await Reports.find().sort({ createdAt: -1 });
+      const reports = await Reports.find().sort({ createdAt: -1 }).populate({
+        path: 'category',
+        select: ['_id', 'name', 'image'],
+      });
 
       // Ambil reporter, unit_work, officer_report, dan officer untuk setiap laporan
       const formattedReports = await Promise.all(reports.map(async report => {
@@ -156,6 +158,10 @@ router.get(
       .populate({
         path: 'comment',
         select: ['message', 'name'],
+      })
+      .populate({
+        path: 'category',
+        select: ['_id', 'name', 'image'],
       })
       .select(
         '_id title status description imageReport unitWorks createdAt address -comment ',
@@ -264,6 +270,10 @@ router.get(
           path: 'comment',
           select: ['message', 'name'],
         })
+        .populate({
+          path: 'category',
+          select: ['_id', 'name', 'image'],
+        })
         .select('_id title status description imageReport unitWorks createdAt address');
 
       if (report.length > 0) { // Periksa apakah ada report yang ditemukan
@@ -307,6 +317,10 @@ router.get(
         .populate({
           path: 'reporter',
           select: ['_id', 'name'],
+        })
+        .populate({
+          path: 'category',
+          select: ['_id', 'name', 'image'],
         })
         .populate({
           path: 'unitWorks',

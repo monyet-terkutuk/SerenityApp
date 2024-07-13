@@ -32,7 +32,8 @@ const reportSchema = Schema(
     },
     imageReport: [String],
     category: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'Category',
       required: [true, 'kategori harus ada'],
     },
     reporter: {
