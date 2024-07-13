@@ -92,14 +92,14 @@ router.post("/login", async (req, res, next) => {
   try {
     // Validasi input
     const validationResponse = v.validate(body, loginSchema);
-    if (validationResponse.error) {
+    if (validationResponse !== true) {
       return res.status(400).json({
         meta: {
           message: "Validation failed",
           code: 400,
           status: "error",
         },
-        data: validationResponse.error.details,
+        data: validationResponse,
       });
     }
 
@@ -129,6 +129,9 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
+    // Jika autentikasi berhasil, ambil unit kerja pengguna
+    const unitWork = await UnitWork.findById(user.unitWork);
+
     // Jika autentikasi berhasil, buat token JWT
     const payload = {
       id: user._id,
@@ -155,6 +158,11 @@ router.post("/login", async (req, res, next) => {
         address: user.address,
         role: user.role,
         email: user.email,
+        unitWork: unitWork ? {
+          id: unitWork._id,
+          name: unitWork.name,
+          image: unitWork.image,
+        } : null,
         token: token,
       },
     });
@@ -205,6 +213,36 @@ router.get(
       });
     } catch (error) {
       console.error("Error:", error);
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
+// Delete user
+router.delete(
+  "/delete/:id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const userId = req.params.id;
+
+      // Cari dan hapus pengguna berdasarkan ID
+      const user = await User.findByIdAndDelete(userId);
+
+      if (!user) {
+        return res.status(404).json({
+          code: 404,
+          message: 'User not found',
+          data: null,
+        });
+      }
+
+      return res.status(200).json({
+        code: 200,
+        message: 'User deleted successfully',
+        data: null,
+      });
+    } catch (error) {
       return next(new ErrorHandler(error.message, 500));
     }
   })

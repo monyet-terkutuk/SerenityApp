@@ -9,6 +9,8 @@ const { isAuthenticated, isAdmin } = require("../middleware/auth");
 const Validator = require("fastest-validator");
 const v = new Validator();
 const bcrypt = require('bcrypt');
+const Report = require('../model/reports');
+
 
 // Create unit work
 router.post("",isAuthenticated, catchAsyncErrors(async (req, res, next) => {
@@ -79,5 +81,41 @@ router.get(
   })
 );
   
+// delete unit work
+router.delete(
+  "/:id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      // Check if the unit work exists
+      const unitWork = await UnitWork.findById(id);
+      if (!unitWork) {
+        return res.status(404).json({
+          success: false,
+          message: "Unit work not found",
+        });
+      }
+
+      // Delete related users
+      await User.deleteMany({ unitWork: id });
+
+      // Delete related reports
+      await Report.deleteMany({ unitWorks: id });
+
+      // Delete the unit work
+      await UnitWork.findByIdAndDelete(id);
+
+      res.status(200).json({
+        success: true,
+        message: "Unit work, related users, and reports have been deleted",
+      });
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
+
 
 module.exports = router;

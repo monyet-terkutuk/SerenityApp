@@ -417,5 +417,47 @@ router.post(
   })
 );
 
+// delete report
+router.delete(
+  "/:id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      const reportId = req.params.id;
+      const user = req.user;
+
+      // Cari laporan berdasarkan ID
+      const report = await Reports.findById(reportId);
+
+      if (!report) {
+        return res.status(404).json({
+          code: 404,
+          message: 'Report not found',
+          data: null,
+        });
+      }
+
+      // Periksa apakah pengguna adalah admin atau pembuat laporan
+      if (user.role !== 'admin' && report.reporter.toString() !== user._id.toString()) {
+        return res.status(403).json({
+          code: 403,
+          message: 'You are not allowed to delete this report',
+          data: null,
+        });
+      }
+
+      // Hapus laporan
+      await Reports.findByIdAndDelete(reportId);
+
+      return res.status(200).json({
+        code: 200,
+        message: 'Report deleted successfully',
+        data: null,
+      });
+    } catch (error) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  })
+);
 
 module.exports = router;
