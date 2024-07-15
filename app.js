@@ -28,12 +28,14 @@ const unitWork = require("./controller/unitWork");
 const reports = require("./controller/report");
 const comment = require("./controller/comment");
 const category = require("./controller/category");
+const dashboard = require("./controller/dasboard");
 
 app.use("/user", user);
 app.use("/unit-work", unitWork);
 app.use("/reports", reports);
 app.use("/comment", comment);
 app.use("/category", category);
+app.use("/dashboard", dashboard);
 
 
 // app.use("", welcome);
