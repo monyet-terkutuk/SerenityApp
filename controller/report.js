@@ -474,4 +474,66 @@ router.delete(
   })
 );
 
+// get report by officer id
+router.get( 
+  "/officer/:officer_id",
+  isAuthenticated,
+  catchAsyncErrors(async (req, res, next) => {
+    try {
+      let { limit = 8, skip = 0, q = '', status = '' } = req.query;
+      let criteria = {
+        officer: req.params.officer_id,
+      };
+
+      if (q.length) {
+        criteria = {
+          ...criteria,
+          title: { $regex: `${q}`, $options: 'i' },
+        };
+      }
+
+      if (status.length) {
+        criteria = {
+          ...criteria,
+          status: status,
+        };
+      }
+
+      const count = await Reports.find(criteria).countDocuments();
+  
+      const report = await Reports.find(criteria)
+        .limit(parseInt(limit))
+        .skip(parseInt(skip))
+        .populate({
+          path: 'comment',
+          select: ['message', 'name'],
+        })
+        .select(
+          '_id title status description imageReport unitWorks createdAt address -comment',
+        );
+
+      if (report.length > 0) { // Pastikan ada report yang ditemukan
+        res.json({
+          status: 'ok',
+          count,
+          data: report,
+        });
+      } else {
+        res.status(404).json({
+          status: 'not found',
+          message: 'No reports found',
+          data: null,
+        });
+      }
+    } catch (err) {
+      console.error(err); // Untuk debugging
+      return res.status(500).json({
+        error: 1,
+        message: err.message,
+      });
+    }
+  })
+);
+
+
 module.exports = router;
